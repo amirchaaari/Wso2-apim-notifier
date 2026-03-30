@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: wso2-notifier-v2
+
+  # TODO: remove these excludes when PostgreSQL integration is implemented
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+  # TODO: uncomment and configure when PostgreSQL integration is implemented
+  #datasource:
+  #  url: jdbc:postgresql://localhost:5432/wso2_notifier
+  #  username: postgres
+  #  password: postgres
+  #  driver-class-name: org.postgresql.Driver
+
+  #jpa:
+  #  hibernate:
+  #    ddl-auto: validate
+  #  show-sql: false
+
+  #flyway:
+  #  enabled: true
+  #  locations: classpath:db/migration
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: https
+  username: elastic
+  password: 4TN-fBGiqwZL75+aiivG
+  ca-cert-path: /Users/chaari/Downloads/elasticsearch-9.3.0/config/certs/http_ca.crt
+
+scheduler:
+  delete-use-case:
+    lookback-seconds: 40
