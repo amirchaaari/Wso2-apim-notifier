@@ -35,3 +35,13 @@ elasticsearch:
 scheduler:
   delete-use-case:
     lookback-seconds: 40
+
+usecases:
+  delete:
+    lookback-seconds: 40
+    poll-interval-ms: 30000
+  high-latency:
+    api-name: PizzaShackAPI
+    threshold-ms: 2
+    lookback-seconds: 40
+    poll-interval-ms: 30000

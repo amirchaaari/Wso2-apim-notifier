@@ -19,7 +19,7 @@ public class DeleteUseCase {
     private final DeleteEventService deleteEventService;
     private final NotificationService notificationService;
 
-    @Scheduled(fixedDelay = 30_000)
+    @Scheduled(fixedDelayString = "${usecases.delete.poll-interval-ms}")
     public void run() {
         log.debug("DeleteUseCase — polling ES...");
 

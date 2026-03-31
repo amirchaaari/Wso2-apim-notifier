@@ -10,22 +10,28 @@ public class ConsoleNotifier implements NotificationService {
 
     @Override
     public void notify(AlertMessage alert) {
-        log.info("""
-                ╔══════════════════════════════════════╗
-                  USE CASE TRIGGERED: {}
-                ╠══════════════════════════════════════╣
-                  Performed by : {}
-                  Action       : {}
-                  Resource     : {} / {}
-                  Timestamp    : {}
-                ╚══════════════════════════════════════╝
-                """,
-                alert.getUseCaseType(),
-                alert.getPerformedBy(),
-                alert.getAction(),
-                alert.getResourceType(),
-                alert.getResourceName(),
-                alert.getTimestamp()
-        );
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n╔══════════════════════════════════════╗\n");
+        sb.append(String.format("  USE CASE TRIGGERED: %s%n", alert.getUseCaseType()));
+        sb.append("╠══════════════════════════════════════╣\n");
+        sb.append(String.format("  Performed by  : %s%n", alert.getPerformedBy()));
+        sb.append(String.format("  Action        : %s%n", alert.getAction()));
+        sb.append(String.format("  Resource      : %s / %s%n", alert.getResourceType(), alert.getResourceName()));
+
+        // Print latency details if present
+        if (alert.getResponseLatency() != null) {
+            sb.append(String.format("  Response time : %d ms%n", alert.getResponseLatency()));
+        }
+        if (alert.getBackendLatency() != null) {
+            sb.append(String.format("  Backend time  : %d ms%n", alert.getBackendLatency()));
+        }
+        if (alert.getResponseCode() != null) {
+            sb.append(String.format("  Response code : %d%n", alert.getResponseCode()));
+        }
+
+        sb.append(String.format("  Timestamp     : %s%n", alert.getTimestamp()));
+        sb.append("╚══════════════════════════════════════╝");
+
+        log.info(sb.toString());
     }
 }

@@ -13,4 +13,9 @@ public class AlertMessage {
     private String resourceType;
     private String resourceName;
     private String timestamp;
+
+    // Optional — populated for latency-related use cases
+    private Long responseLatency;
+    private Long backendLatency;
+    private Integer responseCode;
 }
