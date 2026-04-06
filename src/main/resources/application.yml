@@ -42,6 +42,30 @@ usecases:
     poll-interval-ms: 30000
   high-latency:
     api-name: PizzaShackAPI
-    threshold-ms: 2
+    threshold-ms: 2000
     lookback-seconds: 40
     poll-interval-ms: 30000
+  threshold:
+    api-names: PizzaShackAPI,test
+    min-count: 2
+    lookback-seconds: 300
+    poll-interval-ms: 30000
+  faulty:
+    api-names: test,PizzaShackAPI
+    error-codes: 900901
+    lookback-seconds: 40
+    poll-interval-ms: 30000
+
+  brute-force:
+    min-attempts: 3
+    lookback-seconds: 300   # 5 minutes
+    poll-interval-ms: 30000
+
+
+#    error-codes: 900803,900804
+#    api-names: PizzaShackAPI,OrderAPI
+#    # or for all APIs:
+#    api-names: *
+
+#900803 threshhold
+#900901 unothorized
