@@ -1,9 +1,12 @@
 package com.notifier.wso2notifierv2.usecase;
 
+import com.notifier.wso2notifierv2.entity.NotificationRule;
+import com.notifier.wso2notifierv2.entity.UseCaseType;
 import com.notifier.wso2notifierv2.model.AlertMessage;
 import com.notifier.wso2notifierv2.model.LoginAttemptDocument;
-import com.notifier.wso2notifierv2.notification.NotificationService;
+import com.notifier.wso2notifierv2.repository.NotificationRuleRepository;
 import com.notifier.wso2notifierv2.service.BruteForceLoginService;
+import com.notifier.wso2notifierv2.service.IncidentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -19,14 +23,30 @@ import java.util.stream.Collectors;
 public class BruteForceLoginUseCase {
 
     private final BruteForceLoginService bruteForceLoginService;
-    private final NotificationService notificationService;
+    private final IncidentService incidentService;
+    private final NotificationRuleRepository ruleRepository;
 
     @Scheduled(fixedDelayString = "${usecases.brute-force.poll-interval-ms}")
     public void run() {
-        log.debug("BruteForceLoginUseCase — polling ES...");
+        // Load rule from DB — skip if disabled or not found
+        Optional<NotificationRule> ruleOpt = ruleRepository
+                .findByUseCaseTypeAndEnabledTrue(UseCaseType.BRUTE_FORCE_LOGIN);
+
+        if (ruleOpt.isEmpty()) {
+            log.debug("BruteForceLoginUseCase — rule not found or disabled, skipping.");
+            return;
+        }
+
+        NotificationRule rule = ruleOpt.get();
+
+        log.debug("BruteForceLoginUseCase — polling ES (minAttempts={}, lookback={}s)...",
+                rule.getThresholdValue(), rule.getLookbackSeconds());
 
         Map<String, List<LoginAttemptDocument>> suspiciousIps =
-                bruteForceLoginService.fetchSuspiciousIps();
+                bruteForceLoginService.fetchSuspiciousIps(
+                        rule.getThresholdValue(),
+                        rule.getLookbackSeconds()
+                );
 
         if (suspiciousIps.isEmpty()) {
             log.debug("BruteForceLoginUseCase — no suspicious IPs found.");
@@ -49,11 +69,11 @@ public class BruteForceLoginUseCase {
                     .distinct()
                     .collect(Collectors.toList());
 
-            // Use the timestamp of the most recent attempt
             String lastAttemptTime = attempts.stream()
                     .map(LoginAttemptDocument::getLogTimestamp)
                     .filter(t -> t != null && !t.isBlank())
                     .reduce((first, second) -> second)
+                    .map(t -> t.contains("]") ? t.substring(0, t.indexOf("]")).trim() : t)
                     .orElse(attempts.get(0).getTimestamp());
 
             AlertMessage alert = AlertMessage.builder()
@@ -68,7 +88,8 @@ public class BruteForceLoginUseCase {
                     .timestamp(lastAttemptTime)
                     .build();
 
-            notificationService.notify(alert);
+            // groupingKey = IP address — groups all alerts from same IP into one incident
+            incidentService.handleAlert(rule, ip, alert);
         });
     }
 }

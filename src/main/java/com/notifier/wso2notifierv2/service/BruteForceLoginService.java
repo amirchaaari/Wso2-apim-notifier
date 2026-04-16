@@ -6,7 +6,6 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.notifier.wso2notifierv2.model.LoginAttemptDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -23,19 +22,12 @@ public class BruteForceLoginService {
 
     private static final String INDEX = "wso2_audit_logs";
 
-    @Value("${usecases.brute-force.min-attempts}")
-    private int minAttempts;
-
-    @Value("${usecases.brute-force.lookback-seconds}")
-    private int lookbackSeconds;
-
     /**
-     * Queries ES for failed login attempts within the lookback window.
-     * Groups by IP address.
-     * Returns only IPs that reached or exceeded min-attempts,
-     * with the list of documents for that IP (to extract portals/usernames tried).
+     * Params come from the DB rule — not hardcoded via @Value.
      */
-    public Map<String, List<LoginAttemptDocument>> fetchSuspiciousIps() {
+    public Map<String, List<LoginAttemptDocument>> fetchSuspiciousIps(
+            int minAttempts, int lookbackSeconds) {
+
         String from = Instant.now().minusSeconds(lookbackSeconds).toString();
 
         try {
@@ -43,21 +35,18 @@ public class BruteForceLoginService {
                             .index(INDEX)
                             .query(q -> q
                                     .bool(b -> b
-                                            // Only failed login attempts
                                             .must(m -> m
                                                     .term(t -> t
                                                             .field("loginResult.keyword")
                                                             .value("failed")
                                                     )
                                             )
-                                            // Only login_attempt events
                                             .must(m -> m
                                                     .term(t -> t
                                                             .field("eventType.keyword")
                                                             .value("login_attempt")
                                                     )
                                             )
-                                            // Within the lookback window
                                             .must(m -> m
                                                     .range(r -> r
                                                             .date(d -> d
@@ -72,7 +61,6 @@ public class BruteForceLoginService {
                     LoginAttemptDocument.class
             );
 
-            // Group by IP, keep only IPs with >= minAttempts failures
             Map<String, List<LoginAttemptDocument>> suspiciousIps = response.hits().hits().stream()
                     .map(Hit::source)
                     .filter(doc -> doc != null && doc.getRemoteAddress() != null)
@@ -81,12 +69,12 @@ public class BruteForceLoginService {
                     .filter(e -> e.getValue().size() >= minAttempts)
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            log.debug("Brute force check — {} suspicious IP(s) found (min-attempts: {}, lookback: {}s)",
+            log.debug("Brute force check — {} suspicious IP(s) (minAttempts={}, lookback={}s)",
                     suspiciousIps.size(), minAttempts, lookbackSeconds);
             return suspiciousIps;
 
         } catch (Exception e) {
-            log.error("Failed to query Elasticsearch index [{}]: {}", INDEX, e.getMessage(), e);
+            log.error("Failed to query ES index [{}]: {}", INDEX, e.getMessage(), e);
             return Map.of();
         }
     }

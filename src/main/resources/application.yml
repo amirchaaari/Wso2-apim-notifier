@@ -1,28 +1,99 @@
+#spring:
+#  application:
+#    name: wso2-notifier-v2
+#
+#  # TODO: remove these excludes when PostgreSQL integration is implemented
+#  autoconfigure:
+#    exclude:
+#      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+#      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+#
+#  # TODO: uncomment and configure when PostgreSQL integration is implemented
+#  #datasource:
+#  #  url: jdbc:postgresql://localhost:5432/wso2_notifier
+#  #  username: postgres
+#  #  password: postgres
+#  #  driver-class-name: org.postgresql.Driver
+#
+#  #jpa:
+#  #  hibernate:
+#  #    ddl-auto: validate
+#  #  show-sql: false
+#
+#  #flyway:
+#  #  enabled: true
+#  #  locations: classpath:db/migration
+#
+#elasticsearch:
+#  host: localhost
+#  port: 9200
+#  scheme: https
+#  username: elastic
+#  password: 4TN-fBGiqwZL75+aiivG
+#  ca-cert-path: /Users/chaari/Downloads/elasticsearch-9.3.0/config/certs/http_ca.crt
+#
+#scheduler:
+#  delete-use-case:
+#    lookback-seconds: 40
+#
+#usecases:
+#  delete:
+#    lookback-seconds: 40
+#    poll-interval-ms: 30000
+#  high-latency:
+#    api-name: PizzaShackAPI
+#    threshold-ms: 2000
+#    lookback-seconds: 40
+#    poll-interval-ms: 30000
+#  threshold:
+#    api-names: PizzaShackAPI
+#    min-count: 20
+#    lookback-seconds: 40
+#    poll-interval-ms: 30000
+#    cooldown-seconds: 300
+#  faulty:
+#    api-names: test,PizzaShackAPI
+#    error-codes: 900901
+#    lookback-seconds: 40
+#    poll-interval-ms: 30000
+#
+#  brute-force:
+#    min-attempts: 3
+#    lookback-seconds: 300   # 5 minutes
+#    poll-interval-ms: 30000
+
+
+#    error-codes: 900803,900804
+#    api-names: PizzaShackAPI,OrderAPI
+#    # or for all APIs:
+#    api-names: *
+
+#900803 threshhold
+#900901 unothorized
+
+
+
+
+
+
 spring:
   application:
     name: wso2-notifier-v2
 
-  # TODO: remove these excludes when PostgreSQL integration is implemented
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  datasource:
+    url: jdbc:postgresql://localhost:5433/wso2_notifier
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
 
-  # TODO: uncomment and configure when PostgreSQL integration is implemented
-  #datasource:
-  #  url: jdbc:postgresql://localhost:5432/wso2_notifier
-  #  username: postgres
-  #  password: postgres
-  #  driver-class-name: org.postgresql.Driver
-
-  #jpa:
-  #  hibernate:
-  #    ddl-auto: validate
-  #  show-sql: false
-
-  #flyway:
-  #  enabled: true
-  #  locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 elasticsearch:
   host: localhost
@@ -31,10 +102,6 @@ elasticsearch:
   username: elastic
   password: 4TN-fBGiqwZL75+aiivG
   ca-cert-path: /Users/chaari/Downloads/elasticsearch-9.3.0/config/certs/http_ca.crt
-
-scheduler:
-  delete-use-case:
-    lookback-seconds: 40
 
 usecases:
   delete:
@@ -46,26 +113,15 @@ usecases:
     lookback-seconds: 40
     poll-interval-ms: 30000
   threshold:
-    api-names: PizzaShackAPI,test
-    min-count: 2
-    lookback-seconds: 300
-    poll-interval-ms: 30000
+      api-names: PizzaShackAPI
+      min-count: 20
+      lookback-seconds: 40
+      poll-interval-ms: 30000
+      cooldown-seconds: 300
   faulty:
-    api-names: test,PizzaShackAPI
+    api-names: PizzaShackAPI
     error-codes: 900901
     lookback-seconds: 40
     poll-interval-ms: 30000
-
   brute-force:
-    min-attempts: 3
-    lookback-seconds: 300   # 5 minutes
     poll-interval-ms: 30000
-
-
-#    error-codes: 900803,900804
-#    api-names: PizzaShackAPI,OrderAPI
-#    # or for all APIs:
-#    api-names: *
-
-#900803 threshhold
-#900901 unothorized

@@ -15,7 +15,6 @@
     <groupId>com.notifier</groupId>
     <artifactId>wso2-notifier-v2</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>wso2-notifier-v2</name>
     <description>WSO2 APIM Monitoring Rule Engine</description>
 
     <properties>
@@ -43,31 +42,14 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Flyway -->
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-        </dependency>
-
-        <!-- JSONB support for PostgreSQL -->
-        <dependency>
-            <groupId>io.hypersistence</groupId>
-            <artifactId>hypersistence-utils-hibernate-63</artifactId>
-            <version>3.7.3</version>
-        </dependency>
-
-        <!-- Elasticsearch Java client — must match your ES server version (9.x) -->
+        <!-- Elasticsearch Java client - must match your ES server version (9.x) -->
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
             <version>9.0.0</version>
         </dependency>
 
-        <!-- Low-level REST client (HC5 based, pulled by elasticsearch-java but explicit for clarity) -->
+        <!-- Low-level REST client (HC5 based) -->
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-client</artifactId>
