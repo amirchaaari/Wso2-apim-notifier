@@ -23,4 +23,6 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
             String groupingKey,
             IncidentStatus status
     );
+
+    List<Incident> findByRuleUseCaseType(com.notifier.wso2notifierv2.entity.UseCaseType useCaseType);
 }

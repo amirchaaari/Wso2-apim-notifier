@@ -88,7 +88,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -109,18 +109,18 @@ usecases:
     poll-interval-ms: 30000
   high-latency:
     api-name: PizzaShackAPI
-    threshold-ms: 2000
+    threshold-ms: 20
     lookback-seconds: 40
     poll-interval-ms: 30000
   threshold:
       api-names: PizzaShackAPI
-      min-count: 20
+      min-count: 5
       lookback-seconds: 40
       poll-interval-ms: 30000
       cooldown-seconds: 300
   faulty:
-    api-names: PizzaShackAPI
-    error-codes: 900901
+    api-names: PizzaShackAPI,
+    error-codes: 900902,900901
     lookback-seconds: 40
     poll-interval-ms: 30000
   brute-force:

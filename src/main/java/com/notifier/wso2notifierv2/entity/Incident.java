@@ -9,11 +9,7 @@ import java.util.List;
 
 @Data
 @Entity
-@Table(name = "incident",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = {"rule_id", "grouping_key", "status"}
-        )
-)
+@Table(name = "incident")
 public class Incident {
 
     @Id

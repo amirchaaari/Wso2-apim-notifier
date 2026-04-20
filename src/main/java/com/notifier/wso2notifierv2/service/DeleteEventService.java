@@ -22,11 +22,8 @@ public class DeleteEventService {
 
     private static final String INDEX = "wso2_audit_delete";
 
-    @Value("${usecases.delete.lookback-seconds}")
-    private int lookbackSeconds;
-
-    public List<DeleteEventDocument> fetchRecentDeleteEvents() {
-        String from = Instant.now().minusSeconds(lookbackSeconds).toString();
+    public List<DeleteEventDocument> fetchRecentDeleteEvents(com.notifier.wso2notifierv2.entity.NotificationRule rule) {
+        String from = Instant.now().minusSeconds(rule.getLookbackSeconds()).toString();
 
         try {
             SearchResponse<DeleteEventDocument> response = esClient.search(s -> s

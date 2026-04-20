@@ -1,5 +1,6 @@
 package com.notifier.wso2notifierv2.model;
 
+import com.notifier.wso2notifierv2.entity.Severity;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,6 +11,7 @@ import java.util.List;
 public class AlertMessage {
 
     private String useCaseType;    // "DELETE_EVENT", "HIGH_LATENCY", "THRESHOLD", "FAULTY", "BRUTE_FORCE_LOGIN"
+    private Severity severity;
     private String performedBy;
     private String action;
     private String resourceType;

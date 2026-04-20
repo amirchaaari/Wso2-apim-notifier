@@ -1,9 +1,12 @@
 package com.notifier.wso2notifierv2.usecase;
 
+import com.notifier.wso2notifierv2.entity.NotificationRule;
+import com.notifier.wso2notifierv2.entity.UseCaseType;
 import com.notifier.wso2notifierv2.model.AlertMessage;
 import com.notifier.wso2notifierv2.model.DeleteEventDocument;
-import com.notifier.wso2notifierv2.notification.NotificationService;
+import com.notifier.wso2notifierv2.repository.NotificationRuleRepository;
 import com.notifier.wso2notifierv2.service.DeleteEventService;
+import com.notifier.wso2notifierv2.service.IncidentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,32 +20,43 @@ import java.util.List;
 public class DeleteUseCase {
 
     private final DeleteEventService deleteEventService;
-    private final NotificationService notificationService;
+    private final NotificationRuleRepository ruleRepository;
+    private final IncidentService incidentService;
 
-    @Scheduled(fixedDelayString = "${usecases.delete.poll-interval-ms}")
+    @Scheduled(fixedDelay = 30000) // Poll every 30s
     public void run() {
+        NotificationRule rule = ruleRepository.findByUseCaseType(UseCaseType.DELETE_EVENT)
+                .orElse(null);
+
+        if (rule == null || !rule.isEnabled()) {
+            return;
+        }
+
         log.debug("DeleteUseCase — polling ES...");
 
-        List<DeleteEventDocument> events = deleteEventService.fetchRecentDeleteEvents();
+        List<DeleteEventDocument> events = deleteEventService.fetchRecentDeleteEvents(rule);
 
         if (events.isEmpty()) {
-            log.debug("DeleteUseCase — no new delete events found.");
             return;
         }
 
         log.info("DeleteUseCase — found {} delete event(s).", events.size());
 
         for (DeleteEventDocument event : events) {
+            String resourceName = event.getInfo() != null ? event.getInfo().getName() : "N/A";
+            
             AlertMessage alert = AlertMessage.builder()
-                    .useCaseType("DELETE_EVENT")
+                    .useCaseType(rule.getUseCaseType().name())
+                    .severity(rule.getSeverity())
                     .performedBy(event.getPerformedBy())
                     .action(event.getAction())
                     .resourceType(event.getType())
-                    .resourceName(event.getInfo() != null ? event.getInfo().getName() : "N/A")
+                    .resourceName(resourceName)
                     .timestamp(event.getLogTimestamp())
                     .build();
 
-            notificationService.notify(alert);
+            // Use resourceName as groupingKey for delete events
+            incidentService.handleAlert(rule, resourceName, alert);
         }
     }
 }

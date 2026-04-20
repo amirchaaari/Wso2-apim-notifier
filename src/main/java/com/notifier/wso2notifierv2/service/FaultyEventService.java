@@ -25,19 +25,12 @@ public class FaultyEventService {
     private static final String INDEX = "apim_event_faulty";
     private static final String WILDCARD = "*";
 
-    // Comma-separated: "PizzaShackAPI,OrderAPI" or "*" for all
-    @Value("${usecases.faulty.api-names}")
-    private String apiNamesRaw;
-
-    // Comma-separated: "900803,900804"
-    @Value("${usecases.faulty.error-codes}")
-    private String errorCodesRaw;
-
-    @Value("${usecases.faulty.lookback-seconds}")
-    private int lookbackSeconds;
-
-    public List<FaultyEventDocument> fetchFaultyEvents() {
-        String from = Instant.now().minusSeconds(lookbackSeconds).toString();
+    // Returns a map of API Name -> List of faulty events
+    public java.util.Map<String, List<FaultyEventDocument>> fetchFaultyEvents(com.notifier.wso2notifierv2.entity.NotificationRule rule) {
+        String from = Instant.now().minusSeconds(rule.getLookbackSeconds()).toString();
+        
+        String apiNamesRaw = rule.getApiNames() != null ? rule.getApiNames() : WILDCARD;
+        String errorCodesRaw = rule.getErrorCodes() != null ? rule.getErrorCodes() : "";
 
         List<String> apiNames = Arrays.stream(apiNamesRaw.split(","))
                 .map(String::trim)
@@ -98,11 +91,12 @@ public class FaultyEventService {
 
             log.debug("Fetched {} faulty event(s) from ES (errorCodes: {}, apiNames: {})",
                     events.size(), errorCodesRaw, apiNamesRaw);
-            return events;
+                    
+            return events.stream().collect(Collectors.groupingBy(FaultyEventDocument::getApiName));
 
         } catch (Exception e) {
             log.error("Failed to query Elasticsearch index [{}]: {}", INDEX, e.getMessage(), e);
-            return List.of();
+            return java.util.Map.of();
         }
     }
 }

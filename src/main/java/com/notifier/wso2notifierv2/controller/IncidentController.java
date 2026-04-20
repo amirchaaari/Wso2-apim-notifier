@@ -15,17 +15,28 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/incidents")
 @RequiredArgsConstructor
-public class  IncidentController {
+public class IncidentController {
 
     private final IncidentRepository incidentRepository;
 
     @GetMapping
-    public ResponseEntity<List<IncidentResponse>> getAllIncidents() {
-        List<IncidentResponse> incidents = incidentRepository.findAll()
-                .stream()
+    public ResponseEntity<List<IncidentResponse>> getAllIncidents(@RequestParam(required = false) String rule) {
+        List<Incident> incidents;
+        if (rule != null && !rule.isEmpty()) {
+            try {
+                com.notifier.wso2notifierv2.entity.UseCaseType useCaseType = com.notifier.wso2notifierv2.entity.UseCaseType.valueOf(rule.toUpperCase());
+                incidents = incidentRepository.findByRuleUseCaseType(useCaseType);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        } else {
+            incidents = incidentRepository.findAll();
+        }
+
+        List<IncidentResponse> response = incidents.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(incidents);
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}/acknowledge")
@@ -54,6 +65,11 @@ public class  IncidentController {
     }
 
     private IncidentResponse toResponse(Incident incident) {
+        String latestDetails = null;
+        if (incident.getAlertHistory() != null && !incident.getAlertHistory().isEmpty()) {
+            latestDetails = incident.getAlertHistory().get(incident.getAlertHistory().size() - 1).getDetails();
+        }
+
         return IncidentResponse.builder()
                 .id(incident.getId())
                 .ruleName(incident.getRule().getUseCaseType().name())
@@ -65,6 +81,7 @@ public class  IncidentController {
                 .acknowledgedBy(incident.getAcknowledgedBy())
                 .acknowledgedAt(incident.getAcknowledgedAt())
                 .resolvedAt(incident.getResolvedAt())
+                .details(latestDetails)
                 .build();
     }
 }

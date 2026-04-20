@@ -26,17 +26,11 @@ public class ThresholdEventService {
     private static final String INDEX = "apim_event_response";
     private static final String WILDCARD = "*";
 
-    // Comma-separated in yml: "PizzaShackAPI,OrderAPI" or "*" for all
-    @Value("${usecases.threshold.api-names}")
-    private String apiNamesRaw;
+    public Map<String, Long> fetchApiCallCountsExceedingThreshold(com.notifier.wso2notifierv2.entity.NotificationRule rule) {
+        int lookbackSeconds = rule.getLookbackSeconds() != null ? rule.getLookbackSeconds() : 60;
+        int minCount = rule.getThresholdValue() != null ? rule.getThresholdValue().intValue() : 1000;
+        String apiNamesRaw = rule.getApiNames() != null ? rule.getApiNames() : WILDCARD;
 
-    @Value("${usecases.threshold.min-count}")
-    private int minCount;
-
-    @Value("${usecases.threshold.lookback-seconds}")
-    private int lookbackSeconds;
-
-    public Map<String, Long> fetchApiCallCountsExceedingThreshold() {
         String from = Instant.now().minusSeconds(lookbackSeconds).toString();
 
         List<String> apiNames = Arrays.stream(apiNamesRaw.split(","))

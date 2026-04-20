@@ -19,4 +19,5 @@ public class IncidentResponse {
     private String acknowledgedBy;
     private Instant acknowledgedAt;
     private Instant resolvedAt;
+    private String details;
 }
