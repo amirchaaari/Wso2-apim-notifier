@@ -18,64 +18,58 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BruteForceLoginService {
 
-    private final ElasticsearchClient esClient;
+        private final ElasticsearchClient esClient;
 
-    private static final String INDEX = "wso2_audit_logs";
+        private static final String INDEX = "wso2_audit_logs";
 
-    /**
-     * Params come from the DB rule — not hardcoded via @Value.
-     */
-    public Map<String, List<LoginAttemptDocument>> fetchSuspiciousIps(
-            int minAttempts, int lookbackSeconds) {
+        /**
+         * Params come from the DB rule — not hardcoded via @Value.
+         */
+        public Map<String, List<LoginAttemptDocument>> fetchSuspiciousIps(
+                        int minAttempts, int lookbackSeconds, java.util.Optional<Instant> earliestTimestamp) {
 
-        String from = Instant.now().minusSeconds(lookbackSeconds).toString();
+                Instant fromInstant = Instant.now().minusSeconds(lookbackSeconds);
+                if (earliestTimestamp.isPresent() && earliestTimestamp.get().isAfter(fromInstant)) {
+                        fromInstant = earliestTimestamp.get();
+                }
+                String from = fromInstant.toString();
 
-        try {
-            SearchResponse<LoginAttemptDocument> response = esClient.search(s -> s
-                            .index(INDEX)
-                            .query(q -> q
-                                    .bool(b -> b
-                                            .must(m -> m
-                                                    .term(t -> t
-                                                            .field("loginResult.keyword")
-                                                            .value("failed")
-                                                    )
-                                            )
-                                            .must(m -> m
-                                                    .term(t -> t
-                                                            .field("eventType.keyword")
-                                                            .value("login_attempt")
-                                                    )
-                                            )
-                                            .must(m -> m
-                                                    .range(r -> r
-                                                            .date(d -> d
-                                                                    .field("@timestamp")
-                                                                    .gte(from)
-                                                            )
-                                                    )
-                                            )
-                                    )
-                            )
-                            .size(10000),
-                    LoginAttemptDocument.class
-            );
+                try {
+                        SearchResponse<LoginAttemptDocument> response = esClient.search(s -> s
+                                        .index(INDEX)
+                                        .query(q -> q
+                                                        .bool(b -> b
+                                                                        .must(m -> m
+                                                                                        .term(t -> t
+                                                                                                        .field("loginResult.keyword")
+                                                                                                        .value("failed")))
+                                                                        .must(m -> m
+                                                                                        .term(t -> t
+                                                                                                        .field("eventType.keyword")
+                                                                                                        .value("login_attempt")))
+                                                                        .must(m -> m
+                                                                                        .range(r -> r
+                                                                                                        .date(d -> d
+                                                                                                                        .field("@timestamp")
+                                                                                                                        .gte(from))))))
+                                        .size(10000),
+                                        LoginAttemptDocument.class);
 
-            Map<String, List<LoginAttemptDocument>> suspiciousIps = response.hits().hits().stream()
-                    .map(Hit::source)
-                    .filter(doc -> doc != null && doc.getRemoteAddress() != null)
-                    .collect(Collectors.groupingBy(LoginAttemptDocument::getRemoteAddress))
-                    .entrySet().stream()
-                    .filter(e -> e.getValue().size() >= minAttempts)
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                        Map<String, List<LoginAttemptDocument>> suspiciousIps = response.hits().hits().stream()
+                                        .map(Hit::source)
+                                        .filter(doc -> doc != null && doc.getRemoteAddress() != null)
+                                        .collect(Collectors.groupingBy(LoginAttemptDocument::getRemoteAddress))
+                                        .entrySet().stream()
+                                        .filter(e -> e.getValue().size() >= minAttempts)
+                                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            log.debug("Brute force check — {} suspicious IP(s) (minAttempts={}, lookback={}s)",
-                    suspiciousIps.size(), minAttempts, lookbackSeconds);
-            return suspiciousIps;
+                        log.debug("Brute force check — {} suspicious IP(s) (minAttempts={}, lookback={}s)",
+                                        suspiciousIps.size(), minAttempts, lookbackSeconds);
+                        return suspiciousIps;
 
-        } catch (Exception e) {
-            log.error("Failed to query ES index [{}]: {}", INDEX, e.getMessage(), e);
-            return Map.of();
+                } catch (Exception e) {
+                        log.error("Failed to query ES index [{}]: {}", INDEX, e.getMessage(), e);
+                        return Map.of();
+                }
         }
-    }
 }

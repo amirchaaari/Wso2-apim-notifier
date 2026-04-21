@@ -3,6 +3,8 @@ package com.notifier.wso2notifierv2.dto;
 import com.notifier.wso2notifierv2.entity.Severity;
 import lombok.Data;
 
+import java.util.Set;
+
 @Data
 public class RuleRequest {
     private Integer thresholdValue;
@@ -11,4 +13,5 @@ public class RuleRequest {
     private String apiNames;
     private Severity severity;
     private String description;
+    private Set<Long> targetIds;
 }

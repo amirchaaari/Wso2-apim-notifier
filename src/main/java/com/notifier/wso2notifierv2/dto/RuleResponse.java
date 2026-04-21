@@ -20,4 +20,5 @@ public class RuleResponse {
     private String description;
     private Instant createdAt;
     private Instant updatedAt;
+    private java.util.Set<com.notifier.wso2notifierv2.entity.NotificationTarget> targets;
 }

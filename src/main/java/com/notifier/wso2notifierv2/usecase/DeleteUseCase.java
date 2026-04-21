@@ -23,7 +23,7 @@ public class DeleteUseCase {
     private final NotificationRuleRepository ruleRepository;
     private final IncidentService incidentService;
 
-    @Scheduled(fixedDelay = 30000) // Poll every 30s
+    @Scheduled(fixedDelayString = "${usecases.delete.poll-interval-ms}") // Poll every 30s
     public void run() {
         NotificationRule rule = ruleRepository.findByUseCaseType(UseCaseType.DELETE_EVENT)
                 .orElse(null);
@@ -34,7 +34,9 @@ public class DeleteUseCase {
 
         log.debug("DeleteUseCase — polling ES...");
 
-        List<DeleteEventDocument> events = deleteEventService.fetchRecentDeleteEvents(rule);
+        java.util.Optional<java.time.Instant> globalReset = java.util.Optional
+                .ofNullable(incidentService.getGlobalLatestResolutionTime(rule));
+        List<DeleteEventDocument> events = deleteEventService.fetchRecentDeleteEvents(rule, globalReset);
 
         if (events.isEmpty()) {
             return;
@@ -44,7 +46,22 @@ public class DeleteUseCase {
 
         for (DeleteEventDocument event : events) {
             String resourceName = event.getInfo() != null ? event.getInfo().getName() : "N/A";
-            
+
+            // Filter events to only include those AFTER the latest resolution
+            java.time.Instant latestResolution = incidentService.getLatestResolutionTime(rule, resourceName);
+            if (latestResolution != null) {
+                try {
+                    java.time.Instant eventTime = java.time.Instant.parse(event.getLogTimestamp());
+                    if (!eventTime.isAfter(latestResolution)) {
+                        log.debug("DeleteUseCase — event for {} occurred at {}, before latest resolution {}. Skipping.",
+                                resourceName, event.getLogTimestamp(), latestResolution);
+                        continue;
+                    }
+                } catch (Exception e) {
+                    // Fallback to processing if parsing fails
+                }
+            }
+
             AlertMessage alert = AlertMessage.builder()
                     .useCaseType(rule.getUseCaseType().name())
                     .severity(rule.getSeverity())

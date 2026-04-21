@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class NotificationRuleController {
 
     private final NotificationRuleRepository ruleRepository;
+    private final com.notifier.wso2notifierv2.repository.NotificationTargetRepository targetRepository;
 
     @GetMapping
     public ResponseEntity<List<RuleResponse>> getAllRules() {
@@ -46,18 +47,29 @@ public class NotificationRuleController {
     public ResponseEntity<RuleResponse> updateRule(
             @PathVariable String type,
             @RequestBody RuleRequest request) {
-        
+
         try {
             UseCaseType useCaseType = UseCaseType.valueOf(type.toUpperCase());
             return ruleRepository.findByUseCaseType(useCaseType)
                     .map(rule -> {
-                        if (request.getThresholdValue() != null) rule.setThresholdValue(request.getThresholdValue());
-                        if (request.getLookbackSeconds() != null) rule.setLookbackSeconds(request.getLookbackSeconds());
-                        if (request.getApiNames() != null) rule.setApiNames(request.getApiNames());
-                        if (request.getErrorCodes() != null) rule.setErrorCodes(request.getErrorCodes());
-                        if (request.getSeverity() != null) rule.setSeverity(request.getSeverity());
-                        if (request.getDescription() != null) rule.setDescription(request.getDescription());
-                        
+                        if (request.getThresholdValue() != null)
+                            rule.setThresholdValue(request.getThresholdValue());
+                        if (request.getLookbackSeconds() != null)
+                            rule.setLookbackSeconds(request.getLookbackSeconds());
+                        if (request.getApiNames() != null)
+                            rule.setApiNames(request.getApiNames());
+                        if (request.getErrorCodes() != null)
+                            rule.setErrorCodes(request.getErrorCodes());
+                        if (request.getSeverity() != null)
+                            rule.setSeverity(request.getSeverity());
+                        if (request.getDescription() != null)
+                            rule.setDescription(request.getDescription());
+
+                        if (request.getTargetIds() != null) {
+                            rule.setTargets(
+                                    new java.util.HashSet<>(targetRepository.findAllById(request.getTargetIds())));
+                        }
+
                         NotificationRule saved = ruleRepository.save(rule);
                         log.info("Rule {} updated", type);
                         return ResponseEntity.ok(toResponse(saved));
@@ -107,6 +119,7 @@ public class NotificationRuleController {
                 .description(rule.getDescription())
                 .createdAt(rule.getCreatedAt())
                 .updatedAt(rule.getUpdatedAt())
+                .targets(rule.getTargets())
                 .build();
     }
 }

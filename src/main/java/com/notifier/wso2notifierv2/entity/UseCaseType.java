@@ -5,5 +5,7 @@ public enum UseCaseType {
     HIGH_LATENCY,
     THRESHOLD,
     FAULTY,
-    BRUTE_FORCE_LOGIN
+    BRUTE_FORCE_LOGIN,
+    CUSTOM,
+    PENDING_WORKFLOWS
 }

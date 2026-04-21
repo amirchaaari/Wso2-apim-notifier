@@ -10,10 +10,11 @@ import java.util.List;
 @Builder
 public class AlertMessage {
 
-    private String useCaseType;    // "DELETE_EVENT", "HIGH_LATENCY", "THRESHOLD", "FAULTY", "BRUTE_FORCE_LOGIN"
+    private String useCaseType; // "DELETE_EVENT", "HIGH_LATENCY", "THRESHOLD", "FAULTY", "BRUTE_FORCE_LOGIN"
     private Severity severity;
     private String performedBy;
     private String action;
+    private String description;
     private String resourceType;
     private String resourceName;
     private String timestamp;

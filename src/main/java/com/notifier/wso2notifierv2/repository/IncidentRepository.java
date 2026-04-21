@@ -12,17 +12,19 @@ import java.util.List;
 @Repository
 public interface IncidentRepository extends JpaRepository<Incident, Long> {
 
-    List<Incident> findByRuleAndGroupingKeyAndStatusIn(
-            NotificationRule rule,
-            String groupingKey,
-            java.util.List<IncidentStatus> statuses
-    );
+        List<Incident> findByRuleAndGroupingKeyAndStatusIn(
+                        NotificationRule rule,
+                        String groupingKey,
+                        java.util.List<IncidentStatus> statuses);
 
-    Optional<Incident> findFirstByRuleAndGroupingKeyAndStatusOrderByResolvedAtDesc(
-            NotificationRule rule,
-            String groupingKey,
-            IncidentStatus status
-    );
+        Optional<Incident> findFirstByRuleAndGroupingKeyAndStatusOrderByResolvedAtDesc(
+                        NotificationRule rule,
+                        String groupingKey,
+                        IncidentStatus status);
 
-    List<Incident> findByRuleUseCaseType(com.notifier.wso2notifierv2.entity.UseCaseType useCaseType);
+        Optional<Incident> findFirstByRuleAndStatusOrderByResolvedAtDesc(
+                        NotificationRule rule,
+                        IncidentStatus status);
+
+        List<Incident> findByRuleUseCaseType(com.notifier.wso2notifierv2.entity.UseCaseType useCaseType);
 }

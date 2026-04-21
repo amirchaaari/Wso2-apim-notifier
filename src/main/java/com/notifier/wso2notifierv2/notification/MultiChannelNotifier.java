@@ -1,24 +1,56 @@
 package com.notifier.wso2notifierv2.notification;
 
+import com.notifier.wso2notifierv2.model.AlertMessage;
 import com.notifier.wso2notifierv2.entity.NotificationRule;
 import com.notifier.wso2notifierv2.entity.NotificationTarget;
-import com.notifier.wso2notifierv2.model.AlertMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class ConsoleNotifier implements NotificationService {
+@Primary
+@RequiredArgsConstructor
+public class MultiChannelNotifier implements NotificationService {
+
+    private final EmailChannelService emailService;
 
     @Override
     public void notify(AlertMessage alert, NotificationRule rule) {
+        log.debug("MultiChannelNotifier — processing alert for useCase: {}", alert.getUseCaseType());
+
+        // 1. Dispatch to all associated targets based on their channel
+        if (rule.getTargets() != null) {
+            for (NotificationTarget target : rule.getTargets()) {
+                if (!target.isEnabled())
+                    continue;
+
+                try {
+                    switch (target.getChannel()) {
+                        case EMAIL -> emailService.sendEmail(target, alert);
+                        case TELEGRAM -> log.info(">>> [TELEGRAM CHANNEL] (Placeholder) Notify {}: {}",
+                                target.getContact(), alert.getAction());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to notify target [{}] using channel [{}]: {}",
+                            target.getName(), target.getChannel(), e.getMessage());
+                }
+            }
+        }
+
+        // 2. Also log to console for visibility
+        logToConsole(alert, rule);
+    }
+
+    private void logToConsole(AlertMessage alert, NotificationRule rule) {
         StringBuilder sb = new StringBuilder();
         sb.append("\n╔══════════════════════════════════════╗\n");
         sb.append(String.format("  USE CASE TRIGGERED: %s%n", alert.getUseCaseType()));
 
-        if (rule != null && rule.getTargets() != null && !rule.getTargets().isEmpty()) {
+        if (rule.getTargets() != null && !rule.getTargets().isEmpty()) {
             String targetNames = rule.getTargets().stream()
                     .map(NotificationTarget::getName)
                     .collect(Collectors.joining(", "));

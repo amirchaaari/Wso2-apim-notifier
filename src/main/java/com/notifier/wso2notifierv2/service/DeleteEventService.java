@@ -18,48 +18,46 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DeleteEventService {
 
-    private final ElasticsearchClient esClient;
+        private final ElasticsearchClient esClient;
 
-    private static final String INDEX = "wso2_audit_delete";
+        private static final String INDEX = "wso2_audit_delete";
 
-    public List<DeleteEventDocument> fetchRecentDeleteEvents(com.notifier.wso2notifierv2.entity.NotificationRule rule) {
-        String from = Instant.now().minusSeconds(rule.getLookbackSeconds()).toString();
+        public List<DeleteEventDocument> fetchRecentDeleteEvents(
+                        com.notifier.wso2notifierv2.entity.NotificationRule rule,
+                        java.util.Optional<Instant> earliestTimestamp) {
+                Instant fromInstant = Instant.now().minusSeconds(rule.getLookbackSeconds());
+                if (earliestTimestamp.isPresent() && earliestTimestamp.get().isAfter(fromInstant)) {
+                        fromInstant = earliestTimestamp.get();
+                }
+                String from = fromInstant.toString();
 
-        try {
-            SearchResponse<DeleteEventDocument> response = esClient.search(s -> s
-                            .index(INDEX)
-                            .query(q -> q
-                                    .bool(b -> b
-                                            .must(m -> m
-                                                    .term(t -> t
-                                                            .field("eventType.keyword")
-                                                            .value("delete_confirmed")
-                                                    )
-                                            )
-                                            .must(m -> m
-                                                    .range(r -> r
-                                                            .date(d -> d
-                                                                    .field("@timestamp")
-                                                                    .gte(from)
-                                                            )
-                                                    )
-                                            )
-                                    )
-                            )
-                            .size(100),
-                    DeleteEventDocument.class
-            );
+                try {
+                        SearchResponse<DeleteEventDocument> response = esClient.search(s -> s
+                                        .index(INDEX)
+                                        .query(q -> q
+                                                        .bool(b -> b
+                                                                        .must(m -> m
+                                                                                        .term(t -> t
+                                                                                                        .field("eventType.keyword")
+                                                                                                        .value("delete_confirmed")))
+                                                                        .must(m -> m
+                                                                                        .range(r -> r
+                                                                                                        .date(d -> d
+                                                                                                                        .field("@timestamp")
+                                                                                                                        .gte(from))))))
+                                        .size(100),
+                                        DeleteEventDocument.class);
 
-            List<DeleteEventDocument> events = response.hits().hits().stream()
-                    .map(Hit::source)
-                    .collect(Collectors.toList());
+                        List<DeleteEventDocument> events = response.hits().hits().stream()
+                                        .map(Hit::source)
+                                        .collect(Collectors.toList());
 
-            log.debug("Fetched {} delete_confirmed event(s) from ES", events.size());
-            return events;
+                        log.debug("Fetched {} delete_confirmed event(s) from ES", events.size());
+                        return events;
 
-        } catch (Exception e) {
-            log.error("Failed to query Elasticsearch index [{}]: {}", INDEX, e.getMessage(), e);
-            return List.of();
+                } catch (Exception e) {
+                        log.error("Failed to query Elasticsearch index [{}]: {}", INDEX, e.getMessage(), e);
+                        return List.of();
+                }
         }
-    }
 }

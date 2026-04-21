@@ -24,7 +24,8 @@ public class IncidentController {
         List<Incident> incidents;
         if (rule != null && !rule.isEmpty()) {
             try {
-                com.notifier.wso2notifierv2.entity.UseCaseType useCaseType = com.notifier.wso2notifierv2.entity.UseCaseType.valueOf(rule.toUpperCase());
+                com.notifier.wso2notifierv2.entity.UseCaseType useCaseType = com.notifier.wso2notifierv2.entity.UseCaseType
+                        .valueOf(rule.toUpperCase());
                 incidents = incidentRepository.findByRuleUseCaseType(useCaseType);
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().build();
@@ -40,7 +41,8 @@ public class IncidentController {
     }
 
     @PatchMapping("/{id}/acknowledge")
-    public ResponseEntity<IncidentResponse> acknowledge(@PathVariable Long id, @RequestParam(required = false, defaultValue = "admin") String user) {
+    public ResponseEntity<IncidentResponse> acknowledge(@PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "admin") String user) {
         return incidentRepository.findById(id)
                 .map(incident -> {
                     incident.setStatus(IncidentStatus.ACKNOWLEDGED);
@@ -60,6 +62,16 @@ public class IncidentController {
                     incident.setResolvedAt(Instant.now());
                     Incident saved = incidentRepository.save(incident);
                     return ResponseEntity.ok(toResponse(saved));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteIncident(@PathVariable Long id) {
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    incidentRepository.delete(incident);
+                    return ResponseEntity.ok().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

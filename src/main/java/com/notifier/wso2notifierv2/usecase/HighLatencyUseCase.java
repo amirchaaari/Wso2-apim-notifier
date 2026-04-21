@@ -23,7 +23,7 @@ public class HighLatencyUseCase {
     private final NotificationRuleRepository ruleRepository;
     private final IncidentService incidentService;
 
-    @Scheduled(fixedDelay = 30000) // Poll every 30s
+    @Scheduled(fixedDelayString = "${usecases.high-latency.poll-interval-ms}") // Poll every 30s
     public void run() {
         NotificationRule rule = ruleRepository.findByUseCaseType(UseCaseType.HIGH_LATENCY)
                 .orElse(null);
@@ -34,7 +34,9 @@ public class HighLatencyUseCase {
 
         log.debug("HighLatencyUseCase — polling ES...");
 
-        List<HighLatencyEventDocument> events = highLatencyEventService.fetchHighLatencyEvents(rule);
+        java.util.Optional<java.time.Instant> globalReset = java.util.Optional
+                .ofNullable(incidentService.getGlobalLatestResolutionTime(rule));
+        List<HighLatencyEventDocument> events = highLatencyEventService.fetchHighLatencyEvents(rule, globalReset);
 
         if (events.isEmpty()) {
             return;
@@ -43,6 +45,22 @@ public class HighLatencyUseCase {
         log.info("HighLatencyUseCase — found {} high latency event(s).", events.size());
 
         for (HighLatencyEventDocument event : events) {
+            // Filter events to only include those AFTER the latest resolution
+            java.time.Instant latestResolution = incidentService.getLatestResolutionTime(rule, event.getApiName());
+            if (latestResolution != null) {
+                try {
+                    java.time.Instant eventTime = java.time.Instant.parse(event.getTimestamp());
+                    if (!eventTime.isAfter(latestResolution)) {
+                        log.debug(
+                                "HighLatencyUseCase — event for {} occurred at {}, before latest resolution {}. Skipping.",
+                                event.getApiName(), event.getTimestamp(), latestResolution);
+                        continue;
+                    }
+                } catch (Exception e) {
+                    // Fallback to processing if parsing fails
+                }
+            }
+
             AlertMessage alert = AlertMessage.builder()
                     .useCaseType(rule.getUseCaseType().name())
                     .severity(rule.getSeverity())

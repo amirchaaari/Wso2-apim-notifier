@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Optional;
 import java.util.List;
 
 @Slf4j
@@ -27,27 +26,35 @@ public class IncidentService {
 
     /**
      * Called by each use case when a condition is detected.
-     * - If no OPEN incident exists for this rule + groupingKey → create one and notify
-     * - If OPEN incident exists → increment count, update last_seen, skip notification
+     * - If no OPEN incident exists for this rule + groupingKey → create one and
+     * notify
+     * - If OPEN incident exists → increment count, update last_seen, skip
+     * notification
      */
     @Transactional
     public void handleAlert(NotificationRule rule, String groupingKey, AlertMessage alert) {
         List<Incident> activeIncidents = incidentRepository
-                .findByRuleAndGroupingKeyAndStatusIn(rule, groupingKey, List.of(IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED));
+                .findByRuleAndGroupingKeyAndStatusIn(rule, groupingKey,
+                        List.of(IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED));
 
         if (!activeIncidents.isEmpty()) {
             // Incident already open or acked
             Incident incident = activeIncidents.get(0);
-            
-            // Apply the same cooldown logic: only increment alertCount and update lastSeen 
+
+            // Apply the same cooldown logic: only increment alertCount and update lastSeen
             // if the lookback window has passed since we last updated it.
-            // This prevents the "Detections" count from spam-incrementing every 30 seconds due to the sliding window matching the same ES logs.
-            if (incident.getLastSeen() != null && Instant.now().minusSeconds(rule.getLookbackSeconds()).isBefore(incident.getLastSeen())) {
-                log.debug("Skipping alertCount increment for key {} — still within the lookback window of the last detection.", groupingKey);
+            // This prevents the "Detections" count from spam-incrementing every 30 seconds
+            // due to the sliding window matching the same ES logs.
+            if (incident.getLastSeen() != null
+                    && Instant.now().minusSeconds(rule.getLookbackSeconds()).isBefore(incident.getLastSeen())) {
+                log.debug(
+                        "Skipping alertCount increment for key {} — still within the lookback window of the last detection.",
+                        groupingKey);
                 return;
             }
 
-            // A full lookback window has passed, meaning these must be new detections (or a persistent attack)
+            // A full lookback window has passed, meaning these must be new detections (or a
+            // persistent attack)
             incident.setAlertCount(incident.getAlertCount() + 1);
             incident.setLastSeen(Instant.now());
             incidentRepository.save(incident);
@@ -58,17 +65,6 @@ public class IncidentService {
                     incident.getId(), incident.getAlertCount(), groupingKey);
 
         } else {
-            // Check if recently resolved to prevent recreating based on old ES logs
-            Optional<Incident> recentlyResolved = incidentRepository
-                .findFirstByRuleAndGroupingKeyAndStatusOrderByResolvedAtDesc(rule, groupingKey, IncidentStatus.RESOLVED);
-            
-            if (recentlyResolved.isPresent() && recentlyResolved.get().getResolvedAt() != null) {
-                // If now - lookback overlap with resolved time, we skip to wait for old logs to phase out
-                if (Instant.now().minusSeconds(rule.getLookbackSeconds()).isBefore(recentlyResolved.get().getResolvedAt())) {
-                    log.debug("Skipping incident creation for key {} — previous incident recently resolved and logs are still within the sliding window.", groupingKey);
-                    return;
-                }
-            }
 
             // New incident — create, log, notify
             Incident incident = new Incident();
@@ -82,11 +78,28 @@ public class IncidentService {
 
             logAlertHistory(incident, alert, true);
 
-            notificationService.notify(alert);
+            alert.setDescription(rule.getDescription());
+            notificationService.notify(alert, rule);
 
             log.info("New incident #{} created — useCase={}, groupingKey={}",
                     incident.getId(), rule.getUseCaseType(), groupingKey);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Instant getLatestResolutionTime(NotificationRule rule, String groupingKey) {
+        return incidentRepository
+                .findFirstByRuleAndGroupingKeyAndStatusOrderByResolvedAtDesc(rule, groupingKey, IncidentStatus.RESOLVED)
+                .map(Incident::getResolvedAt)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Instant getGlobalLatestResolutionTime(NotificationRule rule) {
+        return incidentRepository
+                .findFirstByRuleAndStatusOrderByResolvedAtDesc(rule, IncidentStatus.RESOLVED)
+                .map(Incident::getResolvedAt)
+                .orElse(null);
     }
 
     private void logAlertHistory(Incident incident, AlertMessage alert, boolean notificationSent) {

@@ -1,8 +1,9 @@
 package com.notifier.wso2notifierv2.notification;
 
+import com.notifier.wso2notifierv2.entity.NotificationRule;
 import com.notifier.wso2notifierv2.model.AlertMessage;
 
 public interface NotificationService {
 
-    void notify(AlertMessage alert);
+    void notify(AlertMessage alert, NotificationRule rule);
 }
